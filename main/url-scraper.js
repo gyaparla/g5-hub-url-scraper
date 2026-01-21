@@ -107,18 +107,25 @@ async function fetchDataRecursive() {
             // 👀 Debug log to inspect the response
             console.log("Page:", pageIteration, "Fetched JSON:", json);
 
-            // Handle array vs object
-            if (Array.isArray(json)) {
+            if (json && json.locations) {
+                // Normalize: always treat locations as an array
+                const locations = Array.isArray(json.locations)
+                    ? json.locations
+                    : [json.locations]; // wrap single object in array
+
+                console.log("✅ Normalized locations:", locations);
+                jsonData.push(...locations);
+
+                // Stop if no more locations
+                if (locations.length === 0) return jsonData;
+            } else if (Array.isArray(json)) {
+                // Fallback if API returns array directly
                 console.log("✅ JSON is an array with length:", json.length);
                 jsonData.push(...json);
-                if (json.length === 0) return jsonData; // stop if no more data
-            } else if (json && Array.isArray(json.locations)) {
-                console.log("✅ JSON has 'locations' array with length:", json.locations.length);
-                jsonData.push(...json.locations);
-                if (json.locations.length === 0) return jsonData; // stop if no more data
+                if (json.length === 0) return jsonData;
             } else {
                 console.warn("⚠️ Unexpected JSON format:", json);
-                return jsonData; // stop if format is wrong
+                return jsonData;
             }
 
             pageIteration++;
@@ -132,6 +139,7 @@ async function fetchDataRecursive() {
 
     return fetchAndStoreData(locationsJsonUrl, [], pageIteration);
 }
+
 
 function removeSpecialChars(str) {
   return str
