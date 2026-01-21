@@ -88,34 +88,49 @@ if (isClientHubPage()) {
 }
 
 async function fetchDataRecursive() {
-  let pageIteration = 1;
-  let locationsJsonUrl = `https://hub.g5marketingcloud.com/admin/clients/${clientData.urn}/locations.json?order=name_asc&page=${pageIteration}`;
+    let pageIteration = 1;
+    let locationsJsonUrl = `https://hub.g5marketingcloud.com/admin/clients/${clientData.urn}/locations.json?order=name_asc&page=${pageIteration}`;
 
-  async function getJsonData(url) {
-    let fetchResult = await fetch(url);
-    if (!fetchResult.ok) {
-      throw new Error(
-        `Error fetching data from ${url}: ${fetchResult.status} ${fetchResult.statusText}`
-      );
+    async function getJsonData(url) {
+        let fetchResult = await fetch(url);
+        if (!fetchResult.ok) {
+            throw new Error(`Error fetching data from ${url}: ${fetchResult.status} ${fetchResult.statusText}`);
+        }
+        let json = await fetchResult.json();
+        return json;
     }
-    let json = await fetchResult.json();
-    return json;
-  }
 
-  async function fetchAndStoreData(url, jsonData = [], pageIteration) {
-    try {
-      let json = await getJsonData(url);
-      jsonData.push(...json);
-      pageIteration++;
-      let nextUrl = `https://hub.g5marketingcloud.com/admin/clients/${clientData.urn}/locations.json?order=name_asc&page=${pageIteration}`;
-      return fetchAndStoreData(nextUrl, jsonData, pageIteration);
-    } catch (error) {
-      console.error(error);
+    async function fetchAndStoreData(url, jsonData = [], pageIteration) {
+        try {
+            let json = await getJsonData(url);
+
+            // 👀 Debug log to inspect the response
+            console.log("Page:", pageIteration, "Fetched JSON:", json);
+
+            // Handle array vs object
+            if (Array.isArray(json)) {
+                console.log("✅ JSON is an array with length:", json.length);
+                jsonData.push(...json);
+                if (json.length === 0) return jsonData; // stop if no more data
+            } else if (json && Array.isArray(json.locations)) {
+                console.log("✅ JSON has 'locations' array with length:", json.locations.length);
+                jsonData.push(...json.locations);
+                if (json.locations.length === 0) return jsonData; // stop if no more data
+            } else {
+                console.warn("⚠️ Unexpected JSON format:", json);
+                return jsonData; // stop if format is wrong
+            }
+
+            pageIteration++;
+            let nextUrl = `https://hub.g5marketingcloud.com/admin/clients/${clientData.urn}/locations.json?order=name_asc&page=${pageIteration}`;
+            return fetchAndStoreData(nextUrl, jsonData, pageIteration);
+        } catch (error) {
+            console.error("❌ Error in fetchAndStoreData:", error);
+        }
+        return jsonData;
     }
-    return jsonData;
-  }
 
-  return fetchAndStoreData(locationsJsonUrl, [], pageIteration);
+    return fetchAndStoreData(locationsJsonUrl, [], pageIteration);
 }
 
 function removeSpecialChars(str) {
