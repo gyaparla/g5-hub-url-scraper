@@ -104,7 +104,7 @@ async function fetchDataRecursive() {
         try {
             let json = await getJsonData(url);
 
-            // 👀 Debug log to inspect the response
+            // 👀 Debug log
             console.log("Page:", pageIteration, "Fetched JSON:", json);
 
             if (json && json.locations) {
@@ -116,13 +116,23 @@ async function fetchDataRecursive() {
                 console.log("✅ Normalized locations:", locations);
                 jsonData.push(...locations);
 
-                // Stop if no more locations
-                if (locations.length === 0) return jsonData;
+                if (locations.length === 0) {
+                    console.log("ℹ️ No more locations, stopping at page:", pageIteration);
+                    return jsonData;
+                }
             } else if (Array.isArray(json)) {
                 // Fallback if API returns array directly
                 console.log("✅ JSON is an array with length:", json.length);
                 jsonData.push(...json);
-                if (json.length === 0) return jsonData;
+
+                if (json.length === 0) {
+                    console.log("ℹ️ No more locations, stopping at page:", pageIteration);
+                    return jsonData;
+                }
+            } else if (Object.keys(json).length === 0) {
+                // Empty object means no more pages
+                console.log("ℹ️ Empty JSON object, stopping at page:", pageIteration);
+                return jsonData;
             } else {
                 console.warn("⚠️ Unexpected JSON format:", json);
                 return jsonData;
@@ -139,7 +149,6 @@ async function fetchDataRecursive() {
 
     return fetchAndStoreData(locationsJsonUrl, [], pageIteration);
 }
-
 
 function removeSpecialChars(str) {
   return str
